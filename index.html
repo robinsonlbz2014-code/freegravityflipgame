@@ -1,0 +1,1016 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07111f">
+  <title>Gravity Reverse Runner</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #eaf7ff;
+      --muted: #91a7bb;
+      --panel: rgba(8, 20, 37, 0.76);
+      --line: rgba(178, 229, 255, 0.18);
+      --cyan: #51e5ff;
+      --violet: #9e7aff;
+      --lime: #b9ff70;
+      --danger: #ff6d8f;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      overflow-x: hidden;
+      background:
+        radial-gradient(circle at 12% 0%, rgba(66, 129, 177, 0.22), transparent 34rem),
+        radial-gradient(circle at 100% 100%, rgba(116, 67, 188, 0.2), transparent 38rem),
+        #050a12;
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button { font: inherit; }
+
+    .page {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: clamp(18px, 4vw, 42px) 0 28px;
+    }
+
+    .masthead {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 16px;
+    }
+
+    .eyebrow {
+      margin: 0 0 4px;
+      color: var(--cyan);
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.55rem, 4vw, 2.7rem);
+      line-height: 0.95;
+      letter-spacing: -0.055em;
+    }
+
+    .subtitle {
+      max-width: 32rem;
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .scoreboard {
+      display: flex;
+      align-items: stretch;
+      min-width: 210px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      overflow: hidden;
+      background: rgba(4, 14, 27, 0.56);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.15);
+    }
+
+    .score-stat {
+      min-width: 98px;
+      padding: 9px 12px 8px;
+    }
+
+    .score-stat + .score-stat { border-left: 1px solid var(--line); }
+
+    .score-label {
+      display: block;
+      color: var(--muted);
+      font-size: 0.62rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .score-value {
+      display: block;
+      margin-top: 1px;
+      font-variant-numeric: tabular-nums;
+      font-size: 1.38rem;
+      font-weight: 850;
+      letter-spacing: -0.04em;
+    }
+
+    .game-card {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(186, 231, 255, 0.23);
+      border-radius: 22px;
+      background: #07111f;
+      box-shadow: 0 25px 70px rgba(0, 0, 0, 0.35), inset 0 1px rgba(255, 255, 255, 0.04);
+      isolation: isolate;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      min-height: 390px;
+      aspect-ratio: 16 / 8.65;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .game-card::before,
+    .game-card::after {
+      position: absolute;
+      z-index: 2;
+      width: 130px;
+      height: 130px;
+      border-radius: 50%;
+      pointer-events: none;
+      content: "";
+      filter: blur(2px);
+      opacity: 0.45;
+    }
+
+    .game-card::before {
+      top: -105px;
+      left: -75px;
+      border: 1px solid rgba(81, 229, 255, 0.55);
+    }
+
+    .game-card::after {
+      right: -93px;
+      bottom: -102px;
+      border: 1px solid rgba(158, 122, 255, 0.5);
+    }
+
+    .top-controls {
+      position: absolute;
+      z-index: 5;
+      top: 14px;
+      right: 14px;
+      display: flex;
+      gap: 7px;
+    }
+
+    .icon-button {
+      display: grid;
+      width: 36px;
+      height: 36px;
+      place-items: center;
+      border: 1px solid rgba(202, 239, 255, 0.24);
+      border-radius: 10px;
+      background: rgba(5, 15, 29, 0.65);
+      color: var(--ink);
+      cursor: pointer;
+      transition: transform 150ms ease, background 150ms ease;
+    }
+
+    .icon-button:hover,
+    .icon-button:focus-visible {
+      outline: none;
+      background: rgba(26, 69, 95, 0.82);
+      transform: translateY(-1px);
+    }
+
+    .screen {
+      position: absolute;
+      z-index: 4;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: linear-gradient(90deg, rgba(2, 8, 17, 0.72), rgba(2, 8, 17, 0.22) 62%, rgba(2, 8, 17, 0.52));
+      opacity: 1;
+      transition: opacity 210ms ease, visibility 210ms ease;
+    }
+
+    .screen.is-hidden {
+      visibility: hidden;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .dialog {
+      width: min(100%, 405px);
+      padding: clamp(20px, 3vw, 31px);
+      border: 1px solid rgba(202, 239, 255, 0.24);
+      border-radius: 19px;
+      background: rgba(6, 18, 34, 0.82);
+      box-shadow: 0 18px 60px rgba(0, 0, 0, 0.34);
+      text-align: center;
+      backdrop-filter: blur(11px);
+    }
+
+    .dialog-kicker {
+      margin: 0 0 9px;
+      color: var(--lime);
+      font-size: 0.68rem;
+      font-weight: 900;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .dialog h2 {
+      margin: 0;
+      font-size: clamp(1.45rem, 4.4vw, 2.1rem);
+      letter-spacing: -0.055em;
+    }
+
+    .dialog p {
+      margin: 10px auto 0;
+      color: #bed0de;
+      font-size: 0.93rem;
+      line-height: 1.55;
+    }
+
+    .play-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 182px;
+      margin-top: 20px;
+      padding: 12px 18px;
+      border: 0;
+      border-radius: 11px;
+      background: linear-gradient(135deg, var(--cyan), #9b8dff);
+      color: #07111f;
+      cursor: pointer;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      box-shadow: 0 10px 28px rgba(81, 229, 255, 0.23);
+      transition: filter 150ms ease, transform 150ms ease;
+    }
+
+    .play-button:hover,
+    .play-button:focus-visible {
+      outline: none;
+      filter: brightness(1.1);
+      transform: translateY(-2px);
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 19px 0 0;
+      color: var(--muted);
+      font-size: 0.83rem;
+      text-align: center;
+    }
+
+    kbd {
+      display: inline-block;
+      margin: 0 3px;
+      padding: 2px 6px;
+      border: 1px solid rgba(191, 229, 255, 0.25);
+      border-bottom-color: rgba(191, 229, 255, 0.42);
+      border-radius: 5px;
+      background: rgba(12, 32, 51, 0.8);
+      color: var(--ink);
+      font-family: inherit;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .footer-note {
+      margin: 17px 0 0;
+      color: #72889c;
+      font-size: 0.76rem;
+      text-align: center;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 660px) {
+      .page { width: min(100% - 20px, 1180px); }
+      .masthead { align-items: flex-start; flex-direction: column; gap: 12px; }
+      .scoreboard { width: 100%; }
+      .score-stat { flex: 1; }
+      .game-card { border-radius: 16px; }
+      canvas { min-height: 360px; aspect-ratio: 4 / 3; }
+      .screen { align-items: end; padding-bottom: 28px; }
+    }
+
+    @media (max-width: 390px) {
+      canvas { min-height: 335px; }
+      .dialog { padding: 18px; }
+      .dialog p { font-size: 0.86rem; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="masthead">
+      <div>
+        <p class="eyebrow">One click. Two worlds.</p>
+        <h1>Gravity Reverse Runner</h1>
+        <p class="subtitle">Invert gravity at exactly the right moment—run the floor, then the ceiling, then survive the speed.</p>
+      </div>
+      <div class="scoreboard" aria-label="Game scores">
+        <div class="score-stat">
+          <span class="score-label">Distance</span>
+          <span class="score-value" id="score">0000</span>
+        </div>
+        <div class="score-stat">
+          <span class="score-label">Best</span>
+          <span class="score-value" id="bestScore">0000</span>
+        </div>
+      </div>
+    </header>
+
+    <section class="game-card" aria-label="Gravity Reverse Runner game">
+      <canvas id="gameCanvas" aria-label="Game area. Click or press Space to reverse gravity." role="img"></canvas>
+
+      <div class="top-controls" aria-label="Game controls">
+        <button class="icon-button" id="muteButton" type="button" aria-label="Enable sound" title="Enable sound">♪</button>
+        <button class="icon-button" id="pauseButton" type="button" aria-label="Pause game" title="Pause game">Ⅱ</button>
+      </div>
+
+      <div class="screen" id="screen" aria-live="polite">
+        <div class="dialog">
+          <p class="dialog-kicker" id="dialogKicker">Tap into the current</p>
+          <h2 id="dialogTitle">Reverse the rules.</h2>
+          <p id="dialogText">Click, tap, or press Space to instantly switch between the floor and ceiling. Avoid the neon hazards for as long as you can.</p>
+          <button class="play-button" id="playButton" type="button">Start run</button>
+        </div>
+      </div>
+    </section>
+
+    <p class="controls">
+      <span><kbd>Click</kbd> or <kbd>Space</kbd> invert gravity</span>
+      <span>·</span>
+      <span><kbd>P</kbd> pause</span>
+      <span>·</span>
+      <span><kbd>M</kbd> sound</span>
+    </p>
+    <p class="footer-note">A standalone HTML game—ready for GitHub Pages.</p>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const canvas = document.getElementById("gameCanvas");
+      const context = canvas.getContext("2d");
+      const scoreElement = document.getElementById("score");
+      const bestElement = document.getElementById("bestScore");
+      const screen = document.getElementById("screen");
+      const playButton = document.getElementById("playButton");
+      const pauseButton = document.getElementById("pauseButton");
+      const muteButton = document.getElementById("muteButton");
+      const dialogKicker = document.getElementById("dialogKicker");
+      const dialogTitle = document.getElementById("dialogTitle");
+      const dialogText = document.getElementById("dialogText");
+
+      const STORAGE_KEY = "gravity-reverse-runner-best";
+      const state = {
+        status: "ready",
+        width: 960,
+        height: 520,
+        dpr: 1,
+        now: 0,
+        lastFrame: 0,
+        elapsed: 0,
+        score: 0,
+        best: Number(localStorage.getItem(STORAGE_KEY)) || 0,
+        speed: 314,
+        distance: 0,
+        spawnClock: 0.9,
+        gravity: 1,
+        previousLane: null,
+        shake: 0,
+        flash: 0,
+        soundEnabled: false,
+        audio: null,
+        player: { x: 160, y: 0, width: 42, height: 34, pulse: 0, trail: [] },
+        stars: [],
+        obstacles: [],
+        particles: [],
+        world: { ceiling: 92, floor: 428 }
+      };
+
+      const colors = {
+        cyan: "#51e5ff",
+        violet: "#9e7aff",
+        lime: "#b9ff70",
+        pink: "#ff6d8f",
+        ink: "#dff8ff"
+      };
+
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function random(min, max) {
+        return min + Math.random() * (max - min);
+      }
+
+      function formatScore(value) {
+        return Math.floor(value).toString().padStart(4, "0");
+      }
+
+      function updateScoreboard() {
+        scoreElement.textContent = formatScore(state.score);
+        bestElement.textContent = formatScore(Math.max(state.best, state.score));
+      }
+
+      function refreshCanvasSize() {
+        const rect = canvas.getBoundingClientRect();
+        state.width = Math.max(320, rect.width);
+        state.height = Math.max(320, rect.height);
+        state.dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.round(state.width * state.dpr);
+        canvas.height = Math.round(state.height * state.dpr);
+        context.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
+
+        state.world.ceiling = clamp(state.height * 0.175, 62, 110);
+        state.world.floor = clamp(state.height * 0.825, state.height - 174, state.height - 57);
+        state.player.x = clamp(state.width * 0.185, 84, 175);
+        placePlayer();
+        createStars();
+      }
+
+      function placePlayer() {
+        state.player.y = state.gravity === 1
+          ? state.world.floor - state.player.height
+          : state.world.ceiling;
+      }
+
+      function createStars() {
+        const count = Math.round(clamp(state.width / 17, 20, 75));
+        state.stars = Array.from({ length: count }, () => ({
+          x: random(0, state.width),
+          y: random(0, state.height),
+          size: random(0.5, 1.8),
+          alpha: random(0.18, 0.75),
+          depth: random(0.08, 0.38),
+          drift: random(0.25, 1.05)
+        }));
+      }
+
+      function resetRun() {
+        state.elapsed = 0;
+        state.score = 0;
+        state.speed = 314;
+        state.distance = 0;
+        state.spawnClock = 1.14;
+        state.gravity = 1;
+        state.previousLane = null;
+        state.shake = 0;
+        state.flash = 0;
+        state.obstacles = [];
+        state.particles = [];
+        state.player.pulse = 0;
+        state.player.trail = [];
+        placePlayer();
+        updateScoreboard();
+      }
+
+      function startRun() {
+        resetRun();
+        state.status = "playing";
+        screen.classList.add("is-hidden");
+        pauseButton.textContent = "Ⅱ";
+        pauseButton.setAttribute("aria-label", "Pause game");
+        playTone(300, 0.07, "sine", 0.035);
+      }
+
+      function showScreen(kicker, title, text, buttonLabel) {
+        dialogKicker.textContent = kicker;
+        dialogTitle.textContent = title;
+        dialogText.textContent = text;
+        playButton.textContent = buttonLabel;
+        screen.classList.remove("is-hidden");
+      }
+
+      function gameOver() {
+        if (state.status !== "playing") return;
+        state.status = "gameover";
+        state.shake = 9;
+        state.flash = 0.78;
+        addBurst(state.player.x + state.player.width / 2, state.player.y + state.player.height / 2, 34, colors.pink, 1.25);
+        if (state.score > state.best) {
+          state.best = Math.floor(state.score);
+          localStorage.setItem(STORAGE_KEY, String(state.best));
+        }
+        updateScoreboard();
+        playTone(88, 0.18, "sawtooth", 0.065);
+        window.setTimeout(() => {
+          showScreen(
+            state.score >= state.best && state.score > 0 ? "New high score" : "Signal lost",
+            `${formatScore(state.score)} meters`,
+            "The course accelerates forever. Find the rhythm, flip late, and make the next line your new best.",
+            "Run again"
+          );
+        }, 360);
+      }
+
+      function setPaused(shouldPause) {
+        if (state.status !== "playing" && state.status !== "paused") return;
+        state.status = shouldPause ? "paused" : "playing";
+        pauseButton.textContent = shouldPause ? "▶" : "Ⅱ";
+        pauseButton.setAttribute("aria-label", shouldPause ? "Resume game" : "Pause game");
+        if (shouldPause) {
+          showScreen("Time is frozen", "Paused", "Take a breath. Your runner is waiting in its current gravity lane.", "Resume run");
+        } else {
+          screen.classList.add("is-hidden");
+          state.lastFrame = performance.now();
+        }
+      }
+
+      function invertGravity() {
+        if (state.status !== "playing") return;
+        state.gravity *= -1;
+        placePlayer();
+        state.player.pulse = 1;
+        addBurst(
+          state.player.x + state.player.width / 2,
+          state.gravity === 1 ? state.world.floor : state.world.ceiling,
+          17,
+          state.gravity === 1 ? colors.cyan : colors.violet,
+          0.62
+        );
+        playTone(state.gravity === 1 ? 340 : 510, 0.055, "triangle", 0.045);
+      }
+
+      function nextSpawnDelay() {
+        const base = Math.max(0.72, 1.25 - state.elapsed * 0.0085);
+        return base + random(0.12, 0.4);
+      }
+
+      function spawnObstacle() {
+        let lane = Math.random() < 0.5 ? 1 : -1;
+        if (state.elapsed < 5 && state.previousLane === null) lane = 1;
+        if (state.elapsed > 13 && Math.random() < 0.33) lane = -state.previousLane;
+        state.previousLane = lane;
+
+        const typeRoll = Math.random();
+        const type = typeRoll < 0.68 ? "spikes" : typeRoll < 0.9 ? "block" : "gate";
+        const available = state.world.floor - state.world.ceiling;
+        const height = type === "spikes"
+          ? clamp(random(29, 49), 25, available * 0.19)
+          : type === "block"
+            ? clamp(random(41, 66), 37, available * 0.25)
+            : clamp(random(51, 72), 42, available * 0.28);
+        const width = type === "spikes" ? random(42, 64) : type === "block" ? random(38, 54) : random(48, 62);
+        const y = lane === 1 ? state.world.floor - height : state.world.ceiling;
+
+        state.obstacles.push({
+          x: state.width + random(46, 110),
+          y,
+          width,
+          height,
+          lane,
+          type,
+          phase: random(0, Math.PI * 2),
+          accent: lane === 1 ? colors.pink : colors.lime
+        });
+      }
+
+      function addBurst(x, y, count, color, strength) {
+        for (let index = 0; index < count; index += 1) {
+          const angle = random(0, Math.PI * 2);
+          const speed = random(28, 118) * strength;
+          state.particles.push({
+            x,
+            y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: random(0.22, 0.55),
+            maxLife: 0,
+            size: random(1.1, 3.3),
+            color
+          });
+          state.particles[state.particles.length - 1].maxLife = state.particles[state.particles.length - 1].life;
+        }
+      }
+
+      function overlap(a, b) {
+        return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+      }
+
+      function playerHitbox() {
+        return {
+          x: state.player.x + 7,
+          y: state.player.y + 5,
+          width: state.player.width - 14,
+          height: state.player.height - 10
+        };
+      }
+
+      function obstacleHitbox(obstacle) {
+        if (obstacle.type === "spikes") {
+          return {
+            x: obstacle.x + 7,
+            y: obstacle.y + 9,
+            width: obstacle.width - 14,
+            height: obstacle.height - 9
+          };
+        }
+        return { x: obstacle.x + 4, y: obstacle.y + 3, width: obstacle.width - 8, height: obstacle.height - 3 };
+      }
+
+      function update(delta) {
+        if (state.status !== "playing") return;
+        state.elapsed += delta;
+        state.speed = Math.min(690, 314 + state.elapsed * 13.2);
+        state.distance += state.speed * delta;
+        state.score = state.distance / 10;
+        state.spawnClock -= delta;
+        if (state.spawnClock <= 0) {
+          spawnObstacle();
+          state.spawnClock = nextSpawnDelay();
+        }
+
+        const player = state.player;
+        player.pulse = Math.max(0, player.pulse - delta * 3.9);
+        player.trail.push({
+          x: player.x + player.width / 2,
+          y: player.y + player.height / 2,
+          life: 0.28,
+          size: 12 + player.pulse * 11,
+          lane: state.gravity
+        });
+        if (player.trail.length > 24) player.trail.shift();
+        player.trail.forEach((point) => { point.life -= delta; });
+        player.trail = player.trail.filter((point) => point.life > 0);
+
+        state.obstacles.forEach((obstacle) => {
+          obstacle.x -= state.speed * delta;
+          obstacle.phase += delta * 4;
+        });
+        state.obstacles = state.obstacles.filter((obstacle) => obstacle.x + obstacle.width > -70);
+
+        for (const obstacle of state.obstacles) {
+          if (overlap(playerHitbox(), obstacleHitbox(obstacle))) {
+            gameOver();
+            break;
+          }
+        }
+
+        state.particles.forEach((particle) => {
+          particle.x += particle.vx * delta;
+          particle.y += particle.vy * delta;
+          particle.vx *= 0.97;
+          particle.vy *= 0.97;
+          particle.life -= delta;
+        });
+        state.particles = state.particles.filter((particle) => particle.life > 0);
+        state.shake = Math.max(0, state.shake - delta * 28);
+        state.flash = Math.max(0, state.flash - delta * 1.7);
+        updateScoreboard();
+      }
+
+      function roundRectPath(ctx, x, y, width, height, radius) {
+        const r = Math.min(radius, width / 2, height / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + width, y, x + width, y + height, r);
+        ctx.arcTo(x + width, y + height, x, y + height, r);
+        ctx.arcTo(x, y + height, x, y, r);
+        ctx.arcTo(x, y, x + width, y, r);
+        ctx.closePath();
+      }
+
+      function drawBackground() {
+        const gradient = context.createLinearGradient(0, 0, 0, state.height);
+        gradient.addColorStop(0, "#091a31");
+        gradient.addColorStop(0.49, "#071324");
+        gradient.addColorStop(1, "#101334");
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, state.width, state.height);
+
+        const horizonGlow = context.createRadialGradient(state.width * 0.57, state.height * 0.5, 0, state.width * 0.57, state.height * 0.5, state.width * 0.72);
+        horizonGlow.addColorStop(0, "rgba(94, 103, 255, 0.11)");
+        horizonGlow.addColorStop(0.55, "rgba(39, 185, 255, 0.035)");
+        horizonGlow.addColorStop(1, "rgba(5, 11, 22, 0)");
+        context.fillStyle = horizonGlow;
+        context.fillRect(0, 0, state.width, state.height);
+
+        for (const star of state.stars) {
+          const x = (star.x - state.distance * star.depth * star.drift) % (state.width + 12);
+          const wrappedX = x < -6 ? x + state.width + 12 : x;
+          context.fillStyle = `rgba(197, 239, 255, ${star.alpha})`;
+          context.fillRect(wrappedX, star.y, star.size, star.size);
+        }
+
+        context.save();
+        context.globalAlpha = 0.18;
+        context.strokeStyle = "#5edbff";
+        context.lineWidth = 1;
+        const gridStart = -((state.distance * 0.22) % 42);
+        for (let x = gridStart; x < state.width + 42; x += 42) {
+          context.beginPath();
+          context.moveTo(x, state.world.ceiling + 22);
+          context.lineTo(x + 100, state.world.floor - 22);
+          context.stroke();
+        }
+        context.restore();
+      }
+
+      function drawTrack(y, direction, label) {
+        const lineGradient = context.createLinearGradient(0, y, state.width, y);
+        lineGradient.addColorStop(0, "rgba(81, 229, 255, 0.18)");
+        lineGradient.addColorStop(0.45, "rgba(174, 228, 255, 0.75)");
+        lineGradient.addColorStop(1, "rgba(158, 122, 255, 0.18)");
+        context.strokeStyle = lineGradient;
+        context.lineWidth = 2;
+        context.beginPath();
+        context.moveTo(0, y);
+        context.lineTo(state.width, y);
+        context.stroke();
+
+        context.save();
+        context.strokeStyle = "rgba(130, 213, 255, 0.34)";
+        context.lineWidth = 1;
+        const start = -((state.distance * 0.65) % 32);
+        for (let x = start; x < state.width + 32; x += 32) {
+          context.beginPath();
+          context.moveTo(x, y);
+          context.lineTo(x + 9, y + direction * 9);
+          context.stroke();
+        }
+        context.fillStyle = "rgba(187, 228, 255, 0.34)";
+        context.font = "800 10px system-ui, sans-serif";
+        context.letterSpacing = "2px";
+        context.fillText(label, 17, y + direction * 25);
+        context.restore();
+      }
+
+      function drawObstacle(obstacle) {
+        const { x, y, width, height, lane, type, accent } = obstacle;
+        context.save();
+        context.shadowColor = accent;
+        context.shadowBlur = 12;
+
+        if (type === "spikes") {
+          const spikes = Math.max(2, Math.round(width / 15));
+          const baseY = lane === 1 ? y + height : y;
+          const tipY = lane === 1 ? y : y + height;
+          context.fillStyle = accent;
+          context.beginPath();
+          context.moveTo(x, baseY);
+          for (let index = 0; index < spikes; index += 1) {
+            const left = x + (index * width) / spikes;
+            const middle = left + width / spikes / 2;
+            const right = left + width / spikes;
+            context.lineTo(left, baseY);
+            context.lineTo(middle, tipY);
+            context.lineTo(right, baseY);
+          }
+          context.lineTo(x + width, baseY);
+          context.closePath();
+          context.fill();
+          context.shadowBlur = 0;
+          context.strokeStyle = "rgba(255,255,255,0.7)";
+          context.lineWidth = 1;
+          context.stroke();
+        } else {
+          const direction = lane === 1 ? 1 : -1;
+          const radius = type === "gate" ? 9 : 6;
+          const gradient = context.createLinearGradient(x, y, x + width, y + height);
+          gradient.addColorStop(0, accent);
+          gradient.addColorStop(1, lane === 1 ? "#b84673" : "#64b95c");
+          context.fillStyle = gradient;
+          roundRectPath(context, x, y, width, height, radius);
+          context.fill();
+          context.shadowBlur = 0;
+          context.strokeStyle = "rgba(245, 255, 255, 0.75)";
+          context.lineWidth = 1;
+          context.stroke();
+
+          context.save();
+          context.beginPath();
+          roundRectPath(context, x + 4, y + 4, width - 8, height - 8, Math.max(3, radius - 3));
+          context.clip();
+          context.strokeStyle = "rgba(5, 15, 31, 0.34)";
+          context.lineWidth = 3;
+          for (let stripe = -height; stripe < width + height; stripe += 13) {
+            context.beginPath();
+            context.moveTo(x + stripe, y + height * (direction === 1 ? 0 : 1));
+            context.lineTo(x + stripe + height, y + height * (direction === 1 ? 1 : 0));
+            context.stroke();
+          }
+          context.restore();
+
+          if (type === "gate") {
+            context.fillStyle = "rgba(6, 16, 32, 0.6)";
+            const coreY = lane === 1 ? y + height - 12 : y + 5;
+            roundRectPath(context, x + 8, coreY, width - 16, 7, 3);
+            context.fill();
+          }
+        }
+        context.restore();
+      }
+
+      function drawTrails() {
+        for (const point of state.player.trail) {
+          const alpha = clamp(point.life / 0.28, 0, 1) * 0.35;
+          context.beginPath();
+          context.fillStyle = point.lane === 1 ? `rgba(81, 229, 255, ${alpha})` : `rgba(158, 122, 255, ${alpha})`;
+          context.arc(point.x, point.y, point.size * alpha, 0, Math.PI * 2);
+          context.fill();
+        }
+      }
+
+      function drawPlayer() {
+        const player = state.player;
+        const centerX = player.x + player.width / 2;
+        const centerY = player.y + player.height / 2;
+        context.save();
+        context.translate(centerX, centerY);
+        context.rotate(state.gravity === -1 ? Math.PI : 0);
+        context.scale(1 + player.pulse * 0.1, 1 - player.pulse * 0.05);
+        context.translate(-player.width / 2, -player.height / 2);
+
+        context.shadowColor = state.gravity === 1 ? colors.cyan : colors.violet;
+        context.shadowBlur = 21 + player.pulse * 14;
+        const shell = context.createLinearGradient(0, 0, player.width, player.height);
+        shell.addColorStop(0, "#ecfeff");
+        shell.addColorStop(0.35, state.gravity === 1 ? colors.cyan : "#b8a4ff");
+        shell.addColorStop(1, "#4c57c8");
+        context.fillStyle = shell;
+        roundRectPath(context, 0, 0, player.width, player.height, 11);
+        context.fill();
+        context.shadowBlur = 0;
+        context.strokeStyle = "rgba(255, 255, 255, 0.86)";
+        context.lineWidth = 1;
+        context.stroke();
+
+        context.fillStyle = "rgba(3, 18, 36, 0.88)";
+        roundRectPath(context, 12, 8, 22, 13, 5);
+        context.fill();
+        context.fillStyle = "#d9ffff";
+        context.fillRect(16, 11, 4, 3);
+        context.fillStyle = "#9e7aff";
+        context.fillRect(25, 11, 4, 3);
+
+        context.fillStyle = "rgba(10, 36, 67, 0.68)";
+        context.fillRect(5, player.height - 4, 8, 4);
+        context.fillRect(player.width - 13, player.height - 4, 8, 4);
+        context.restore();
+      }
+
+      function drawParticles() {
+        for (const particle of state.particles) {
+          const alpha = clamp(particle.life / particle.maxLife, 0, 1);
+          context.fillStyle = particle.color;
+          context.globalAlpha = alpha;
+          context.beginPath();
+          context.arc(particle.x, particle.y, particle.size * alpha, 0, Math.PI * 2);
+          context.fill();
+        }
+        context.globalAlpha = 1;
+      }
+
+      function drawCenterReadout() {
+        if (state.status !== "playing") return;
+        const speedLabel = `${Math.round(state.speed)} km/h`;
+        context.save();
+        context.fillStyle = "rgba(186, 224, 255, 0.47)";
+        context.font = "800 10px system-ui, sans-serif";
+        context.textAlign = "right";
+        context.fillText(speedLabel, state.width - 18, state.height - 19);
+        context.textAlign = "left";
+        context.restore();
+      }
+
+      function render() {
+        context.save();
+        const shakeX = state.shake ? random(-state.shake, state.shake) : 0;
+        const shakeY = state.shake ? random(-state.shake * 0.55, state.shake * 0.55) : 0;
+        context.translate(shakeX, shakeY);
+        context.clearRect(-12, -12, state.width + 24, state.height + 24);
+        drawBackground();
+        drawTrack(state.world.ceiling, 1, "CEILING LANE");
+        drawTrack(state.world.floor, -1, "FLOOR LANE");
+        drawTrails();
+        state.obstacles.forEach(drawObstacle);
+        drawParticles();
+        drawPlayer();
+        drawCenterReadout();
+        if (state.flash > 0) {
+          context.fillStyle = `rgba(255, 109, 143, ${state.flash * 0.28})`;
+          context.fillRect(0, 0, state.width, state.height);
+        }
+        context.restore();
+      }
+
+      function frame(timestamp) {
+        const delta = Math.min(0.034, Math.max(0, (timestamp - state.lastFrame) / 1000 || 0));
+        state.lastFrame = timestamp;
+        update(delta);
+        render();
+        requestAnimationFrame(frame);
+      }
+
+      function createAudioContext() {
+        if (!state.audio) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) state.audio = new AudioContextClass();
+        }
+        if (state.audio && state.audio.state === "suspended") state.audio.resume();
+      }
+
+      function playTone(frequency, duration, wave, volume) {
+        if (!state.soundEnabled) return;
+        createAudioContext();
+        if (!state.audio) return;
+        const oscillator = state.audio.createOscillator();
+        const gain = state.audio.createGain();
+        oscillator.type = wave;
+        oscillator.frequency.setValueAtTime(frequency, state.audio.currentTime);
+        gain.gain.setValueAtTime(volume, state.audio.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, state.audio.currentTime + duration);
+        oscillator.connect(gain).connect(state.audio.destination);
+        oscillator.start();
+        oscillator.stop(state.audio.currentTime + duration);
+      }
+
+      function toggleSound() {
+        state.soundEnabled = !state.soundEnabled;
+        muteButton.textContent = state.soundEnabled ? "♫" : "♪";
+        muteButton.setAttribute("aria-label", state.soundEnabled ? "Disable sound" : "Enable sound");
+        muteButton.title = state.soundEnabled ? "Disable sound" : "Enable sound";
+        if (state.soundEnabled) {
+          createAudioContext();
+          playTone(440, 0.055, "sine", 0.04);
+        }
+      }
+
+      function act() {
+        if (state.status === "ready" || state.status === "gameover") {
+          startRun();
+        } else if (state.status === "paused") {
+          setPaused(false);
+        } else {
+          invertGravity();
+        }
+      }
+
+      canvas.addEventListener("pointerdown", (event) => {
+        event.preventDefault();
+        act();
+      });
+
+      playButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        act();
+      });
+
+      pauseButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        if (state.status === "playing") setPaused(true);
+        else if (state.status === "paused") setPaused(false);
+      });
+
+      muteButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        toggleSound();
+      });
+
+      window.addEventListener("keydown", (event) => {
+        if (["Space", "ArrowUp", "KeyW"].includes(event.code)) {
+          event.preventDefault();
+          act();
+        }
+        if (event.code === "KeyP") {
+          event.preventDefault();
+          if (state.status === "playing") setPaused(true);
+          else if (state.status === "paused") setPaused(false);
+        }
+        if (event.code === "KeyM") toggleSound();
+      });
+
+      window.addEventListener("resize", refreshCanvasSize);
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden && state.status === "playing") setPaused(true);
+      });
+
+      refreshCanvasSize();
+      updateScoreboard();
+      requestAnimationFrame(frame);
+    })();
+  </script>
+</body>
+</html>
